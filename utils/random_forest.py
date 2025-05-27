@@ -6,11 +6,13 @@ import numpy as np
 import pandas as pd
 
 # Relative imports
+from prettytable import PrettyTable
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.feature_selection import SelectKBest, f_classif, VarianceThreshold
 from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.metrics import accuracy_score, roc_auc_score, recall_score, f1_score
 
 
 if __name__ == "__main__":
@@ -36,7 +38,16 @@ if __name__ == "__main__":
 
     X_clean = X_train.replace([np.inf, -np.inf], np.nan)
 
-    print(pipeline.fit(X_clean, y_train).score(X_test, y_test))
+    pipeline.fit(X_clean, y_train)
+    y_train_pred = pipeline.predict(X_clean)
+    y_test_pred = pipeline.predict(X_test)
+
+    myTable = PrettyTable(["Accuracy", "AUC ROC", "Sensitivity", "F1-score"])
+    myTable.add_divider()
+    myTable.add_row([accuracy_score(y_train, y_train_pred), roc_auc_score(y_train, y_train_pred), recall_score(y_train, y_train_pred), f1_score(y_train, y_train_pred)])
+    myTable.add_divider()
+    myTable.add_row([accuracy_score(y_test, y_test_pred), roc_auc_score(y_test, y_test_pred), recall_score(y_test, y_test_pred), f1_score(y_test, y_test_pred)])
+    print(myTable)
     # mask = pipeline.fit(X_clean, y).named_steps["selector_i"].get_support(indices=True)
     # selected_features = X_clean.columns[mask]
     # print(f"Reduced from {X_clean.shape[1]} to {len(mask)} features.")
