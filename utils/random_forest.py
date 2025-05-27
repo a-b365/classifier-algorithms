@@ -4,6 +4,7 @@ import os
 # Third-party imports 
 import numpy as np
 import pandas as pd
+from scipy.stats import randint
 
 # Relative imports
 from prettytable import PrettyTable
@@ -13,16 +14,17 @@ from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.feature_selection import SelectKBest, f_classif, VarianceThreshold
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.metrics import accuracy_score, roc_auc_score, recall_score, f1_score
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, RandomizedSearchCV
 
 
 if __name__ == "__main__":
     
     pipeline = Pipeline([
         ("imputer", SimpleImputer(missing_values=np.nan, strategy="median")),
-        ("scalar", StandardScaler()),
+        ("scaler", StandardScaler()),
         # ("selector_i", VarianceThreshold(threshold=0.01)),
         # ("selector_ii", SelectKBest(score_func=f_classif, k=100)),
-        ("model", RandomForestClassifier(max_depth=None, max_features="log2", n_estimators=100, min_samples_leaf=1, min_samples_split=20))
+        ("model", RandomForestClassifier(n_estimators=100))
     ])
 
     TRAIN_DATA = os.environ["ORIGINAL_DATA_PATH"] + "/train_set.csv"
@@ -38,6 +40,7 @@ if __name__ == "__main__":
 
     X_clean = X_train.replace([np.inf, -np.inf], np.nan)
 
+    print("Metrics before hyperparameter tuning")
     pipeline.fit(X_clean, y_train)
     y_train_pred = pipeline.predict(X_clean)
     y_test_pred = pipeline.predict(X_test)
@@ -48,8 +51,40 @@ if __name__ == "__main__":
     myTable.add_divider()
     myTable.add_row([accuracy_score(y_test, y_test_pred), roc_auc_score(y_test, y_test_pred), recall_score(y_test, y_test_pred), f1_score(y_test, y_test_pred)])
     print(myTable)
-    # mask = pipeline.fit(X_clean, y).named_steps["selector_i"].get_support(indices=True)
-    # selected_features = X_clean.columns[mask]
-    # print(f"Reduced from {X_clean.shape[1]} to {len(mask)} features.")
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+    params = {
+
+            'model__n_estimators': randint(100, 300),
+            'model__max_depth': randint(5, 50),
+            'model__min_samples_split': randint(2, 20),
+            'model__min_samples_leaf': randint(1, 20),
+            'model__max_features': ['sqrt', 'log2']
+    }
+
+    print("Starting grid search for hyperparameter tuning...")
+    random_search = RandomizedSearchCV(pipeline, param_distributions=params, n_iter=10, cv=cv, scoring="f1", n_jobs=-1, verbose=2)
+    random_search.fit(X_clean, y_train)
+    best_params = random_search.best_params_
+
+    print("Metrics after hyperparameter tuning")
+    pipeline.set_params(model__n_estimators = best_params["model__n_estimators"], 
+                        model__max_depth = best_params["model__max_depth"], 
+                        model__min_samples_split = best_params["model__min_samples_split"], 
+                        model__min_samples_leaf = best_params["model__min_samples_leaf"], 
+                        model__max_features = best_params["model__max_features"])
+    pipeline.fit(X_clean, y_train)
+    y_train_pred = pipeline.predict(X_clean)
+    y_test_pred = pipeline.predict(X_test)
+
+    myTable = PrettyTable(["Accuracy", "AUC ROC", "Sensitivity", "F1-score"])
+    myTable.add_divider()
+    myTable.add_row([accuracy_score(y_train, y_train_pred), roc_auc_score(y_train, y_train_pred), recall_score(y_train, y_train_pred), f1_score(y_train, y_train_pred)])
+    myTable.add_divider()
+    myTable.add_row([accuracy_score(y_test, y_test_pred), roc_auc_score(y_test, y_test_pred), recall_score(y_test, y_test_pred), f1_score(y_test, y_test_pred)])
+    print(myTable)
+    
+
     
 
