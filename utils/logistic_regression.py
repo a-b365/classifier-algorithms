@@ -9,33 +9,15 @@ import pandas as pd
 from prettytable import PrettyTable
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.feature_selection import SelectKBest, f_classif, VarianceThreshold, SelectFromModel
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer, KNNImputer
-from sklearn.model_selection import StratifiedKFold, GridSearchCV, cross_val_score
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.metrics import make_scorer, f1_score
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
 
 # Local imports
 from metrics import evaluate_metrics
-
-
-class CorrelationFilter(BaseEstimator, TransformerMixin):
-
-    def __init__(self, threshold=0.95):
-        self.threshold = threshold
-        self.to_drop_ = None
-    
-    def fit(self, X, y=None):
-        # Compute Correlation Matrix
-        corr_matrix = pd.DataFrame(X).corr().abs()
-        upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
-        self.to_drop_ = [column for column in upper.columns if any(upper[column] > self.threshold)]
-        return self
-    
-    def transform(self, X):
-        return pd.DataFrame(X).drop(columns=self.to_drop_, axis=1)
+from correlation import CorrelationFilter
 
 if __name__ == "__main__":
     
@@ -45,8 +27,7 @@ if __name__ == "__main__":
         ("imputer", SimpleImputer(missing_values=np.nan, strategy="median")),
         ("scaler", StandardScaler()),
         ("var_thresh", VarianceThreshold(threshold=0.01)),
-        ("pca", PCA(n_components=0.95, random_state=42)),
-        ("select_model", SelectFromModel(estimator=base_model, threshold="median")),
+        ('correlation_filter', CorrelationFilter(threshold=0.95)),
         ("model", base_model)
     ])
 
@@ -63,29 +44,18 @@ if __name__ == "__main__":
     
     X_clean = X_train.replace([np.inf, -np.inf], np.nan)
 
-    f1_scorer = make_scorer(f1_score, average='macro')
+    pipeline.fit(X_clean, y_train)
+    y_train_pred = pipeline.predict(X_clean)
+    y_test_pred = pipeline.predict(X_test)
 
-    # Cross-validation setup
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    # Fit & evaluate
-    scores = cross_val_score(pipeline, X_clean, y_train, cv=cv, scoring=f1_scorer)
-
-    print("Mean F1 (Cross-Val):", np.mean(scores))
-    print("Std F1 (Cross-Val):", np.std(scores))
-
-    # pipeline.fit(X_clean, y_train)
-    # y_train_pred = pipeline.predict(X_clean)
-    # y_test_pred = pipeline.predict(X_test)
-
-    # myTable = PrettyTable(["Accuracy", "AUC ROC", "Sensitivity", "Specificity", "F1-score"])
-    # myTable.add_divider()
-    # acc, auc, recall, specificity, f1 = evaluate_metrics(y_train, y_train_pred)
-    # myTable.add_row([acc, auc, recall, specificity, f1])
-    # myTable.add_divider()
-    # acc, auc, recall, specificity, f1 = evaluate_metrics(y_test, y_test_pred)
-    # myTable.add_row([acc, auc, recall, specificity, f1])
-    # print(myTable)
+    myTable = PrettyTable(["Accuracy", "AUC ROC", "Sensitivity", "Specificity", "F1-score"])
+    myTable.add_divider()
+    acc, auc, recall, specificity, f1 = evaluate_metrics(y_train, y_train_pred)
+    myTable.add_row([acc, auc, recall, specificity, f1])
+    myTable.add_divider()
+    acc, auc, recall, specificity, f1 = evaluate_metrics(y_test, y_test_pred)
+    myTable.add_row([acc, auc, recall, specificity, f1])
+    print(myTable)
 
     # cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
