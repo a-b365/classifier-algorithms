@@ -17,20 +17,10 @@ from sklearn.model_selection import StratifiedKFold, GridSearchCV
 
 # Local imports
 from metrics import evaluate_metrics
-from correlation import CorrelationFilter
+from correlation import CorrelationFilter, OutlierFilter
 
 if __name__ == "__main__":
     
-    base_model = LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42, class_weight="balanced")
-
-    pipeline = Pipeline([
-        ("imputer", SimpleImputer(missing_values=np.nan, strategy="median")),
-        ("scaler", StandardScaler()),
-        ("var_thresh", VarianceThreshold(threshold=0.01)),
-        ('correlation_filter', CorrelationFilter(threshold=0.95)),
-        ("model", base_model)
-    ])
-
     TRAIN_DATA = os.environ["ORIGINAL_DATA_PATH"] + "/train_set.csv"
     TEST_DATA = os.environ["ORIGINAL_DATA_PATH"] + "/test_set.csv"
 
@@ -42,7 +32,19 @@ if __name__ == "__main__":
     X_test = test_data.drop(columns=["ID", "CLASS"])
     y_test = test_data["CLASS"]
     
-    X_clean = X_train.replace([np.inf, -np.inf], np.nan)
+    X_train = X_train.replace([np.inf, -np.inf], np.nan)
+    X_test = X_test.replace([np.inf, -np.inf], np.nan)
+
+    base_model = LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42, class_weight="balanced")
+
+    pipeline = Pipeline([
+        ("imputer", KNNImputer(missing_values=np.nan, n_neighbors=10)),
+        ("var_thresh", VarianceThreshold(threshold=0.01)),
+        ('correlation_filter', CorrelationFilter(threshold=0.95)),
+        ('outlier_filter', OutlierFilter()),
+        ("scaler", StandardScaler()),
+        ("model", base_model)
+    ])
 
     pipeline.fit(X_clean, y_train)
     y_train_pred = pipeline.predict(X_clean)
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     # cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     # params = {
-    #         'model__C': [0.001, 0.1, 1, 10, 100],
+    #         'model__C': [0.01, 0.1, 1, 10, 100],
     #         'model__penalty': ['l1', 'l2'],
     #         'model__solver': ['lbfgs', 'saga']
     # }
