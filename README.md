@@ -2,162 +2,159 @@
 
 ## Overview
 
-This project implements a comprehensive machine learning pipeline designed to handle high-dimensional datasets with limited sample sizes. The primary challenge addressed is the "curse of dimensionality" where the number of features (3,238) significantly exceeds the number of samples (315).
+This project implements a comprehensive machine learning pipeline designed to handle high-dimensional datasets with limited sample sizes. The primary challenge addressed is the "curse of dimensionality" where the number of features (3238) significantly exceeds the number of samples (315).
 
-## Problem Statement
+---
 
-- **Dataset**: Binary classification with 3,238 features and 315 samples
-- **Challenge**: High dimensionality leading to overfitting and poor generalization
-- **Goal**: Develop robust models that perform well on unseen test data
-- **Models**: Logistic Regression, Random Forest, and Decision Tree classifiers
+## Features
 
-## Key Features
+- **Robust Processing Pipeline**: Missing value handling, outlier detection, feature filtering, and scaling
+- **Advanced Feature Engineering**: Feature selection and power transformation
+- **Model Training & Evaluation**: Multiple algorithms with tuning and comprehensive metrics
+- **Performance Analysis**: Side-by-side performance comparison
 
-### 🔧 Robust Preprocessing Pipeline
-- **Missing Value Handling**: Intelligent imputation using median values
-- **Outlier Detection**: IQR-based outlier detection and clipping
-- **Feature Filtering**: Removal of low-variance and highly correlated features
-- **Normalization**: Robust scaling to handle outlier-resistant preprocessing
+---
 
-### 🎯 Advanced Feature Engineering
-- **Multiple Selection Methods**: Mutual information and model-based selection
-- **Power Transformation**: Yeo-Johnson transformation for normality
+## Technical Approach
 
-### 🤖 Model Training & Evaluation
-- **Multiple Algorithms**: Logistic Regression, Random Forest, Decision Tree
-- **Hyperparameter Tuning**: Grid and Randomized search with cross-validation
-- **Class Imbalance Handling**: SMOTE Oversampling technique
-- **Comprehensive Evaluation**: Accuracy, AUC-ROC, sensitivity, specificity, F1-score
+**Core Methods:**
+- Median imputation and IQR-based outlier handling (feature-wise)
+- Normalize skewed features, remove near-constant and highly correlated features
+- Feature selection based on mutual information
+- Hyperparameter tuning and Stratified Cross Validation
 
-### 📊 Visualization & Analysis
-- **Model Comparison**: Side-by-side performance comparison
-- **Confusion Matrices**: Visual representation of classification results
-- **Feature Importance**: Analysis of most predictive features
+**Stack:**
+- `scikit-learn`, `scipy`, `imblearn`
+- Visualization: `matplotlib`, `seaborn`
+- Helper libs: `numpy`, `pandas`
 
-## Installation
+---
 
-### Prerequisites
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn scipy imbalanced-learn
+## Project Structure
+
+```
+classifier-algorithms/
+├── utils/
+│   ├── decision_tree.py           # Decision Tree Classifier
+│   ├── filters.py                 # Pre-processing Filters
+│   ├── logistic_regression.py     # Logistic Regression Classifier
+│   ├── metrics.py                 # Evaluation Metrics
+│   ├── plots.py                   # Matplotlib & Seaborn visualization helpers
+│   └── random_forest.py           # Random Forest Classifier
+├── notebooks/
+│   └── notebook.ipynb             # Interactive Jupyter notebook
+├── results
+│   └── *.csv                      # Predicted labels for each dataset 
+├── docs/
+│   └── report.pdf                 # Methodology and technical documentation
+├── requirements.txt               # Python dependencies
+├── env.ps1                        # Windows setup script
+└── readme.md                      # Project overview and instructions
 ```
 
-### Required Libraries
-- pandas >= 1.3.0
-- numpy >= 1.21.0
-- scikit-learn >= 1.0.0
-- matplotlib >= 3.4.0
-- seaborn >= 0.11.0
-- scipy >= 1.7.0
-- imbalanced-learn >= 0.8.0
+---
 
-## Usage
+## 🚀 Setup Instructions
 
-### Quick Start
+### 🔧 Prerequisites
 
-```python
-from ml_pipeline import main_pipeline
+- Python 3.8+
+- Git (to clone the repo)
+- PowerShell (for Windows users)
 
-# Define your data paths
-TRAIN_PATH = "path/to/train.csv"
-TEST_PATH = "path/to/test.csv"
+### 💻 Installation
 
-# Run the complete pipeline
-best_model, results, trainer = main_pipeline(TRAIN_PATH, TEST_PATH)
-```
+1. Clone the repository
 
-### Custom Configuration
+    ```bash
+    git clone https://github.com/a-b365/classifier-algorithms.git
+    cd classifier-algorithms
+    ```
 
-```python
-from ml_pipeline import ModelTrainer, create_pipeline
+2. Run the powershell script to add the environment variables:
 
-# Initialize trainer
-trainer = ModelTrainer(cv_folds=5, scoring='roc_auc')
+    ```powershell
+    .\env.ps1
+    ```
 
-# Create custom pipeline
-pipeline = create_pipeline(
-    model_type='logistic',
-    use_pca=True,
-    n_components=50,
-    use_smote=False
-)
+3. Create and activate a virtual environment:
 
-# Train model
-model = trainer.train_model(X_train, y_train, model_type='logistic')
+  - On macOS/Linux:
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    ```
 
-# Evaluate
-results = trainer.evaluate_model(model, X_test, y_test, 'Custom_Model')
-```
+  - On Windows:
+    ```powershell
+    .\venv\Scripts\activate
+    ```
+
+4. Install Dependencies
+
+    Run:
+    ```
+    pip install -r requirements.txt
+    ```
+---
 
 ## Data Format
 
-### Expected CSV Structure
+### CSV Structure
 ```
-ID,feature_1,feature_2,...,feature_n,CLASS
-1,0.123,0.456,...,0.789,0
-2,0.234,0.567,...,0.890,1
+ID,feature_1,feature_2,...,feature_3238,CLASS
+ID_1,18281.541667,18432.0,...,0.061710,0
+ID_2,20010.083333,20100.0,...,0.090548,1
 ...
 ```
 
-### Requirements
-- **ID Column**: Unique identifier for each sample
-- **Feature Columns**: Numerical features (3,238 expected)
-- **CLASS Column**: Binary target variable (0 or 1)
-- **Missing Values**: Handled automatically
-- **Infinite Values**: Automatically converted to NaN and imputed
+---
+
+## Outputs
+
+- **Model Performance**: Tabulate accuracy, AUC ROC, sensitivity, specificity, F1-score
+- **Best Parameters**: Provides the optimal parameters based-on hyperparameter tuning
+- **Best Cross Validation Score**: Provides the highest score achieved during cross-valdiation 
+- **Predicted Labels**: Predicted labels for each dataset in `results/`
+---
 
 ## Methodology
 
-### 1. Data Preprocessing
-- **Infinite Value Handling**: Replace ±∞ with NaN
-- **Missing Value Imputation**: Median-based imputation
-- **Variance Filtering**: Remove low-variance features (threshold: 0.01)
-- **Correlation Filtering**: Remove highly correlated features (threshold: 0.95)
+**Preprocessing:**
+- Infinite Handling
+- Median Imputation
+- Variance Filtering
+- Correlation Filtering
 
-### 2. Feature Engineering
-- **Outlier Treatment**: IQR-based detection and clipping
-- **Power Transformation**: Yeo-Johnson for normality
-- **Scaling**: Robust scaling for outlier resistance
-- **Feature Selection**: Multiple methods (mutual info, RFE, model-based)
+**Feature Engineering**
+- Outlier Treatment
+- Power Transformation
+- Robust Scaling
+- Feature Selection
 
-### 3. Model Training
-- **Cross-Validation**: 5-fold Stratified K-Fold
-- **Hyperparameter Tuning**: Grid search with cross-validation
-- **Class Imbalance**: Balanced class weights
-- **Regularization**: Strong regularization to prevent overfitting
+**Model Training and Evaluation**
+- Cross Validation
+- Hyperparameter Tuning
+- Class Balancing
+- Performance Metrics
 
-### 4. Evaluation Metrics
-- **Primary**: ROC-AUC score (handles class imbalance)
-- **Secondary**: Accuracy, Precision, Recall, F1-score
-- **Visualization**: Confusion matrices and performance plots
+---
 
-## Best Practices for High-Dimensional Data
+## Usage
 
-### ✅ Recommended Approaches
-1. **Aggressive Feature Selection**: Start with 10-50 features
-2. **Strong Regularization**: Use L1/L2 penalties
-3. **Cross-Validation**: Always use stratified CV
-4. **Ensemble Methods**: Random Forest with max_features='sqrt'
-5. **PCA**: Consider for linear dimensionality reduction
+- Run the desired Python module directly from the command line.
+- This will run one classifier at a time:
+  - Logistic Regression: Produces all classification metrics along with the comparison
+  - Decision Tree: Generates initial performance metrics and improved performance
+  - Random Forest: Produces the same results as other classifiers
+- Note: The results of all classifiers are in the similar format
 
-### ❌ Common Pitfalls to Avoid
-1. **No Feature Selection**: Using all 3,238 features
-2. **Data Leakage**: Applying transforms before train/test split
-3. **Overfitting**: Complex models without regularization
-4. **SMOTE Overuse**: Synthetic data may not help generalization
-5. **Ignoring Class Balance**: Not accounting for imbalanced classes
+---
 
-## Results Interpretation
+## Notes
 
-### Model Performance Expectations
-- **Good Performance**: Accuracy > 0.75, AUC > 0.80
-- **Acceptable Performance**: Accuracy > 0.65, AUC > 0.70
-- **Poor Performance**: Accuracy < 0.60, AUC < 0.65
+  - A detailed project report is available in the docs/ folder
+  - Run the Jupyter notebook inside the notebooks/ folder for an interactive walkthrough of the implementation
+  - Blinded test set results can be found in the results/
 
-### Feature Importance Analysis
-```python
-# Get feature importance from trained Random Forest
-rf_model = trainer.trained_models['rf_pca_False_smote_False']
-feature_importance = rf_model.named_steps['classifier'].feature_importances_
-
-# Plot top 20 features
-plt
+---
