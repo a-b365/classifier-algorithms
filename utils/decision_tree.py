@@ -471,7 +471,7 @@ def main():
             proba_df.insert(0, 'ID', ids.values)
             
             # Save to CSV with descriptive filename
-            output_path = os.path.join(results_path, f"proba_dt_{dataset_name}.csv")
+            output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
             proba_df.to_csv(output_path, index=False)
         
         # Performance comparison
