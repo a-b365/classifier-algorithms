@@ -130,19 +130,19 @@ class DecisionTreePipeline:
             ('outlier_filter', OutlierFilter(feature_columns)),
 
             # Power Transformation
-            ("pt", PowerTransformer("yeo-johnson")),
+            # ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
             
             # Remove highly skewed features
-            ('skewness_filter', SkewnessFilter(threshold=1.0)),
+            # ('skewness_filter', SkewnessFilter(threshold=1.0)),
             
             # Remove low variance features
-            ("variance_threshold", VarianceThreshold(threshold=0.5)),
+            # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
-            ('correlation_filter', CorrelationFilter(threshold=0.01)),
+            ('correlation_filter', CorrelationFilter(threshold=0.95)),
             
             # Handle class imbalance
             ('smote', SMOTE(random_state=self.random_state)),
@@ -154,11 +154,11 @@ class DecisionTreePipeline:
             )),
             
             # Final model
-            ("classifier", DecisionTreeClassifier(
-                max_depth=24,
+            ("classifier", DecisionTreeClassifier( 
+                max_depth=2,
                 max_features='sqrt', 
-                min_samples_leaf=4, 
-                min_samples_split=5,
+                min_samples_leaf=3, 
+                min_samples_split=4,
                 random_state=self.random_state,
                 class_weight="balanced"
             ))
@@ -431,72 +431,72 @@ def main():
         
         pipeline = DecisionTreePipeline(random_state=42)
         pipeline.fit(X_train.drop(columns="ID"), y_train)
-
-        # Predict class probabilities for each dataset
-        # datasets = {
-        #     'train': X_train,
-        #     'test': X_test, 
-        #     'blinded': X_blinded
-        # }
-
-        # for dataset_name, dataset in datasets.items():
-        #     # Extract IDs before prediction
-        #     ids = dataset["ID"]
-            
-        #     # Get predictions without ID column
-        #     class_probabilities = pipeline.predict_proba(dataset.drop(columns="ID"))
-            
-        #     # Create DataFrame with class probabilities
-        #     proba_df = pd.DataFrame(class_probabilities)
-            
-        #     # Add ID as the first column
-        #     proba_df.insert(0, 'ID', ids.values)
-            
-        #     # Save to CSV with descriptive filename
-        #     output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
-        #     proba_df.to_csv(output_path, index=False)
         
         # Initial evaluation
         print("\nInitial Model Performance:")
         initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
         
-        # # Hyperparameter tuning
-        # print("\n" + "="*60)
-        # print("HYPERPARAMETER TUNING")
-        # print("="*60)
+        # Hyperparameter tuning
+        print("\n" + "="*60)
+        print("HYPERPARAMETER TUNING")
+        print("="*60)
         
-        # pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
+        pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
         
-        # # Final evaluation
-        # print("\n" + "="*60)
-        # print("FINAL MODEL PERFORMANCE")
-        # print("="*60)
+        # Final evaluation
+        print("\n" + "="*60)
+        print("FINAL MODEL PERFORMANCE")
+        print("="*60)
         
-        # final_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
+        final_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
+
+        # Predict class probabilities for each dataset
+        datasets = {
+            'train': X_train,
+            'test': X_test, 
+            'blinded': X_blinded
+        }
+
+        for dataset_name, dataset in datasets.items():
+            # Extract IDs before prediction
+            ids = dataset["ID"]
+            
+            # Get predictions without ID column
+            class_probabilities = pipeline.predict_proba(dataset.drop(columns="ID"))
+            
+            # Create DataFrame with class probabilities
+            proba_df = pd.DataFrame(class_probabilities)
+            
+            # Add ID as the first column
+            proba_df.insert(0, 'ID', ids.values)
+            
+            # Save to CSV with descriptive filename
+            output_path = os.path.join(results_path, f"proba_dt_{dataset_name}.csv")
+            proba_df.to_csv(output_path, index=False)
         
-        # # Performance comparison
-        # print("\n" + "="*60)
-        # print("PERFORMANCE COMPARISON")
-        # print("="*60)
+        # Performance comparison
+        print("\n" + "="*60)
+        print("PERFORMANCE COMPARISON")
+        print("="*60)
         
-        # comparison_table = PrettyTable([
-        #     "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
-        # ])
-        # comparison_table.add_row([
-        #     "Initial",
-        #     f"{initial_results['test']['accuracy']:.4f}",
-        #     f"{initial_results['test']['f1']:.4f}",
-        #     f"{initial_results['test']['auc']:.4f}"
-        # ])
-        # comparison_table.add_row([
-        #     "Tuned",
-        #     f"{final_results['test']['accuracy']:.4f}",
-        #     f"{final_results['test']['f1']:.4f}",
-        #     f"{final_results['test']['auc']:.4f}"
-        # ])
-        # print(comparison_table)
+        comparison_table = PrettyTable([
+            "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
+        ])
+        comparison_table.add_row([
+            "Initial",
+            f"{initial_results['test']['accuracy']:.4f}",
+            f"{initial_results['test']['f1']:.4f}",
+            f"{initial_results['test']['auc']:.4f}"
+        ])
+        comparison_table.add_row([
+            "Tuned",
+            f"{final_results['test']['accuracy']:.4f}",
+            f"{final_results['test']['f1']:.4f}",
+            f"{final_results['test']['auc']:.4f}"
+        ])
+        print(comparison_table)
         
-        # print("\nPipeline execution completed successfully!")
+        print("\nPipeline execution completed successfully!")
         
     except KeyError as e:
         print(f"Environment variable error: {e}")

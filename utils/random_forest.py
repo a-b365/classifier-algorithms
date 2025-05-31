@@ -158,9 +158,9 @@ class RandomForestPipeline:
                 random_state=self.random_state,
                 class_weight="balanced",
                 max_features='sqrt',
-                max_depth=1,
-                min_samples_split=7,
-                min_samples_leaf=6,
+                max_depth=2,
+                min_samples_split=6,
+                min_samples_leaf=8,
                 n_estimators=8
             ))
         ]
@@ -438,7 +438,7 @@ def main():
         print("\nInitial Model Performance:")
         initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
         
-        # # Hyperparameter tuning
+        # Hyperparameter tuning
         print("\n" + "="*60)
         print("HYPERPARAMETER TUNING")
         print("="*60)
@@ -473,11 +473,11 @@ def main():
             proba_df.insert(0, 'ID', ids.values)
             
             # Save to CSV with descriptive filename
-            output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
-            print("Results saved!")
+            output_path = os.path.join(results_path, f"proba_rf_{dataset_name}.csv")
+            print(f"proba_{dataset_name} saved!")
             proba_df.to_csv(output_path, index=False)
         
-        # # Performance comparison
+        # Performance comparison
         print("\n" + "="*60)
         print("PERFORMANCE COMPARISON")
         print("="*60)
