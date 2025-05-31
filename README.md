@@ -44,7 +44,7 @@ classifier-algorithms/
 ├── notebooks/
 │   └── notebook.ipynb             # Interactive Jupyter notebook
 ├── results
-│   └── *.csv                      # Predicted labels for each dataset 
+│   └── *.csv                      # Class probabilties for each dataset 
 ├── docs/
 │   └── report.pdf                 # Methodology and technical documentation
 ├── requirements.txt               # Python dependencies
