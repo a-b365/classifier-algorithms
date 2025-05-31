@@ -127,33 +127,41 @@ class RandomForestPipeline:
             )),
             
             # Outlier handling - robust outlier treatment
-            ('outlier_filter', OutlierFilter(feature_columns)),
+            # ('outlier_filter', OutlierFilter(feature_columns)),
+
+            # Power Transformation
+            # ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
             
             # Remove highly skewed features
-            ('skewness_filter', SkewnessFilter(threshold=1.0)),
-            
+            # ('skewness_filter', SkewnessFilter(threshold=1.0)),
+
             # Remove low variance features
-            ("variance_threshold", VarianceThreshold(threshold=0.5)),
+            # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
-            ('correlation_filter', CorrelationFilter(threshold=0.95)),
+            # ('correlation_filter', CorrelationFilter(threshold=0.95)),
             
             # Handle class imbalance
-            ('smote', SMOTE(random_state=self.random_state)),
+            # ('smote', SMOTE(random_state=self.random_state)),
             
             # Feature selection based on mutual information
-            ('feature_selection', SelectKBest(
-                score_func=mutual_info_classif, 
-                k=50
-            )),
-            
+            # ('selector', SelectKBest(
+            #     score_func=mutual_info_classif, 
+            #     k=50
+            # )),
+
             # Final model
             ("classifier", RandomForestClassifier(
                 random_state=self.random_state,
-                class_weight="balanced"
+                class_weight="balanced",
+                max_features='log2',
+                max_depth=2,
+                # min_samples_split=5,
+                # min_samples_leaf=5,
+                n_estimators=10
             ))
         ]
         
@@ -298,11 +306,11 @@ class RandomForestPipeline:
         
         # Define parameter distributions for tuning
         params = {
-            'classifier__criterion': ['gini', 'entropy', 'log_loss'],
-            'classifier__max_depth': stats.randint(5, 30),
+            'classifier__n_estimators': stats.randint(0, 20),
+            'classifier__max_depth': stats.randint(0, 10),
             'classifier__min_samples_split': stats.randint(2, 10),
-            'classifier__min_samples_leaf': stats.randint(1, 4),
-            'classifier__max_features': [None, 'sqrt', 'log2'],
+            'classifier__min_samples_leaf': stats.randint(1, 10),
+            'classifier__max_features': ['sqrt', 'log2'],
         }
         
         # Set up cross-validation
@@ -340,7 +348,7 @@ class RandomForestPipeline:
         return self
 
 
-def load_and_preprocess_data(train_path, test_path):
+def load_and_preprocess_data(train_path, test_path, blinded_path):
     """
     Load and preprocess training and test datasets.
     
@@ -350,10 +358,12 @@ def load_and_preprocess_data(train_path, test_path):
         Path to the training dataset CSV file.
     test_path : str
         Path to the test dataset CSV file.
+    blinded_path : str
+        Path to the blinded test dataset CSV file.
     
     Returns
     -------
-    X_train, y_train, X_test, y_test : tuple
+    X_train, y_train, X_test, y_test, X_blinded : tuple
         Preprocessed training and test features and targets.
     """
     try:
@@ -361,23 +371,27 @@ def load_and_preprocess_data(train_path, test_path):
         print("Loading datasets...")
         train_data = pd.read_csv(train_path)
         test_data = pd.read_csv(test_path)
+        blinded_data = pd.read_csv(blinded_path)
         
         print(f"Training data shape: {train_data.shape}")
         print(f"Test data shape: {test_data.shape}")
+        print(f"Blinded test data shape: {blinded_data.shape}")
         
         # Separate features and targets
-        X_train = train_data.drop(columns=["ID", "CLASS"])
+        X_train = train_data.drop(columns=["CLASS"])
         y_train = train_data["CLASS"]
-        X_test = test_data.drop(columns=["ID", "CLASS"])
+        X_test = test_data.drop(columns=["CLASS"])
         y_test = test_data["CLASS"]
+        X_blinded = blinded_data
         
         # Handle infinite values
         print("Handling infinite values...")
         X_train = X_train.replace([np.inf, -np.inf], np.nan)
         X_test = X_test.replace([np.inf, -np.inf], np.nan)
-        
+        X_blinded = X_blinded.replace([np.inf, -np.inf], np.nan)
+
         print("Data preprocessing completed!")
-        return X_train, y_train, X_test, y_test
+        return X_train, y_train, X_test, y_test, X_blinded
         
     except Exception as e:
         print(f"Error loading data: {e}")
@@ -397,16 +411,19 @@ def main():
     """
     try:
         # Get data paths from environment variables
-        data_path = os.environ.get("ORIGINAL_DATA_PATH")
+        data_path = os.environ.get("DATA_PATH")
+        results_path = os.environ.get("RESULTS_PATH")
         if data_path is None:
-            raise ValueError("ORIGINAL_DATA_PATH environment variable not set")
+            raise ValueError("DATA_PATH environment variable not set")
         
         train_path = os.path.join(data_path, "train_set.csv")
         test_path = os.path.join(data_path, "test_set.csv")
+        blinded_path = os.path.join(data_path, "blinded_test_set.csv")
+
         
         # Load and preprocess data
-        X_train, y_train, X_test, y_test = load_and_preprocess_data(
-            train_path, test_path
+        X_train, y_train, X_test, y_test, X_blinded = load_and_preprocess_data(
+            train_path, test_path, blinded_path
         )
         
         # Initialize and fit the pipeline
@@ -415,53 +432,79 @@ def main():
         print("="*60)
         
         pipeline = RandomForestPipeline(random_state=42)
-        pipeline.fit(X_train, y_train)
+        pipeline.fit(X_train.drop(columns="ID"), y_train)
+
+        # Predict class probabilities for each dataset
+        datasets = {
+            'train': X_train,
+            'test': X_test, 
+            'blinded': X_blinded
+        }
+
+        for dataset_name, dataset in datasets.items():
+            # Extract IDs before prediction
+            ids = dataset["ID"]
+            
+            # Get predictions without ID column
+            class_probabilities = pipeline.predict_proba(dataset.drop(columns="ID"))
+            
+            # Create DataFrame with class probabilities
+            proba_df = pd.DataFrame(class_probabilities)
+            
+            # Add ID as the first column
+            proba_df.insert(0, 'ID', ids.values)
+            
+            # Save to CSV with descriptive filename
+            output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
+            print("Results saved!")
+            proba_df.to_csv(output_path, index=False)
         
         # Initial evaluation
-        print("\nInitial Model Performance:")
-        initial_results = pipeline.evaluate(X_train, y_train, X_test, y_test)
+        # print("\nInitial Model Performance:")
+        # initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
         
-        # Hyperparameter tuning
-        print("\n" + "="*60)
-        print("HYPERPARAMETER TUNING")
-        print("="*60)
         
-        pipeline.hyperparameter_tuning(X_train, y_train, cv_folds=5, n_iter=20)
+        # # Hyperparameter tuning
+        # print("\n" + "="*60)
+        # print("HYPERPARAMETER TUNING")
+        # print("="*60)
         
-        # Final evaluation
-        print("\n" + "="*60)
-        print("FINAL MODEL PERFORMANCE")
-        print("="*60)
+        # pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
         
-        final_results = pipeline.evaluate(X_train, y_train, X_test, y_test)
+        # # Final evaluation
+        # print("\n" + "="*60)
+        # print("FINAL MODEL PERFORMANCE")
+        # print("="*60)
         
-        # Performance comparison
-        print("\n" + "="*60)
-        print("PERFORMANCE COMPARISON")
-        print("="*60)
+        # final_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
         
-        comparison_table = PrettyTable([
-            "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
-        ])
-        comparison_table.add_row([
-            "Initial",
-            f"{initial_results['test']['accuracy']:.4f}",
-            f"{initial_results['test']['f1']:.4f}",
-            f"{initial_results['test']['auc']:.4f}"
-        ])
-        comparison_table.add_row([
-            "Tuned",
-            f"{final_results['test']['accuracy']:.4f}",
-            f"{final_results['test']['f1']:.4f}",
-            f"{final_results['test']['auc']:.4f}"
-        ])
-        print(comparison_table)
+        # # Performance comparison
+        # print("\n" + "="*60)
+        # print("PERFORMANCE COMPARISON")
+        # print("="*60)
         
-        print("\nPipeline execution completed successfully!")
+        # comparison_table = PrettyTable([
+        #     "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
+        # ])
+        # comparison_table.add_row([
+        #     "Initial",
+        #     f"{initial_results['test']['accuracy']:.4f}",
+        #     f"{initial_results['test']['f1']:.4f}",
+        #     f"{initial_results['test']['auc']:.4f}"
+        # ])
+        # comparison_table.add_row([
+        #     "Tuned",
+        #     f"{final_results['test']['accuracy']:.4f}",
+        #     f"{final_results['test']['f1']:.4f}",
+        #     f"{final_results['test']['auc']:.4f}"
+        # ])
+        # print(comparison_table)
+        
+        # print("\nPipeline execution completed successfully!")
         
     except KeyError as e:
         print(f"Environment variable error: {e}")
-        print("Please set the ORIGINAL_DATA_PATH environment variable.")
+        print("Please set the DATA_PATH environment variable.")
     except FileNotFoundError as e:
         print(f"File not found: {e}")
         print("Please check that the data files exist at the specified path.")
