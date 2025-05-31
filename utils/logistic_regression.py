@@ -128,7 +128,10 @@ class LogisticRegressionPipeline:
             )),
             
             # Outlier handling - robust outlier treatment
-            # ('outlier_filter', OutlierFilter(feature_columns)),
+            ('outlier_filter', OutlierFilter(feature_columns)),
+
+            # Power Transformation
+            # ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
@@ -140,23 +143,23 @@ class LogisticRegressionPipeline:
             # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
-            # ('correlation_filter', CorrelationFilter(threshold=0.95)),
+            ('correlation_filter', CorrelationFilter(threshold=0.95)),
             
             # Handle class imbalance
-            # ('smote', SMOTE(random_state=self.random_state)),
+            ('smote', SMOTE(random_state=self.random_state)),
             
             # Feature selection based on mutual information
-            # ('feature_selection', SelectKBest(
-            #     score_func=mutual_info_classif, 
-            #     k=50
-            # )),
+            ('feature_selection', SelectKBest(
+                score_func=mutual_info_classif, 
+                k=50
+            )),
             
             # Final model
             ("classifier", LogisticRegression(
                 penalty='l2',
                 solver='saga',
-                max_iter=4085,
-                C=0.001,
+                max_iter=5000,
+                C=0.01,
                 random_state=self.random_state,
                 class_weight="balanced"
             ))
@@ -304,7 +307,7 @@ class LogisticRegressionPipeline:
         # Define parameter grid for tuning
         param_grid = {
             'classifier__max_iter':stats.randint(2500, 5000),
-            'classifier__C': [0.001, 0.1, 1, 10, 100],
+            'classifier__C': [0.001, 0.1, 1],
             'classifier__penalty': ['l1', 'l2'],
             'classifier__solver': ['liblinear', 'saga'],
             'classifier__class_weight': [None, "balanced"]
@@ -431,37 +434,37 @@ def main():
         pipeline.fit(X_train.drop(columns="ID"), y_train)
 
         # Predict class probabilities for each dataset
-        datasets = {
-            'train': X_train,
-            'test': X_test, 
-            'blinded': X_blinded
-        }
+        # datasets = {
+        #     'train': X_train,
+        #     'test': X_test, 
+        #     'blinded': X_blinded
+        # }
 
-        for dataset_name, dataset in datasets.items():
-            # Extract IDs before prediction
-            ids = dataset["ID"]
+        # for dataset_name, dataset in datasets.items():
+        #     # Extract IDs before prediction
+        #     ids = dataset["ID"]
             
-            # Get predictions without ID column
-            class_probabilities = pipeline.predict_proba(dataset.drop(columns="ID"))
+        #     # Get predictions without ID column
+        #     class_probabilities = pipeline.predict_proba(dataset.drop(columns="ID"))
             
-            # Create DataFrame with class probabilities
-            proba_df = pd.DataFrame(class_probabilities)
+        #     # Create DataFrame with class probabilities
+        #     proba_df = pd.DataFrame(class_probabilities)
             
-            # Add ID as the first column
-            proba_df.insert(0, 'ID', ids.values)
+        #     # Add ID as the first column
+        #     proba_df.insert(0, 'ID', ids.values)
             
-            # Save to CSV with descriptive filename
-            output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
-            proba_df.to_csv(output_path, index=False)
+        #     # Save to CSV with descriptive filename
+        #     output_path = os.path.join(results_path, f"proba_{dataset_name}.csv")
+        #     proba_df.to_csv(output_path, index=False)
 
         # Initial evaluation
         print("\nInitial Model Performance:")
-        # initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
+        initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
         
         # Hyperparameter tuning
-        print("\n" + "="*60)
-        print("HYPERPARAMETER TUNING")
-        print("="*60)
+        # print("\n" + "="*60)
+        # print("HYPERPARAMETER TUNING")
+        # print("="*60)
 
     #     pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
         

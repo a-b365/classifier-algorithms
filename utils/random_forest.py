@@ -127,7 +127,7 @@ class RandomForestPipeline:
             )),
             
             # Outlier handling - robust outlier treatment
-            # ('outlier_filter', OutlierFilter(feature_columns)),
+            ('outlier_filter', OutlierFilter(feature_columns)),
 
             # Power Transformation
             # ("pt", PowerTransformer("yeo-johnson")),
@@ -142,26 +142,26 @@ class RandomForestPipeline:
             # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
-            # ('correlation_filter', CorrelationFilter(threshold=0.95)),
+            ('correlation_filter', CorrelationFilter(threshold=0.95)),
             
             # Handle class imbalance
-            # ('smote', SMOTE(random_state=self.random_state)),
+            ('smote', SMOTE(random_state=self.random_state)),
             
             # Feature selection based on mutual information
-            # ('selector', SelectKBest(
-            #     score_func=mutual_info_classif, 
-            #     k=50
-            # )),
+            ('selector', SelectKBest(
+                score_func=mutual_info_classif, 
+                k=50
+            )),
 
             # Final model
             ("classifier", RandomForestClassifier(
                 random_state=self.random_state,
                 class_weight="balanced",
-                max_features='log2',
-                max_depth=2,
-                # min_samples_split=5,
-                # min_samples_leaf=5,
-                n_estimators=10
+                max_features='sqrt',
+                max_depth=1,
+                min_samples_split=7,
+                min_samples_leaf=6,
+                n_estimators=8
             ))
         ]
         
@@ -306,8 +306,8 @@ class RandomForestPipeline:
         
         # Define parameter distributions for tuning
         params = {
-            'classifier__n_estimators': stats.randint(0, 20),
-            'classifier__max_depth': stats.randint(0, 10),
+            'classifier__n_estimators': stats.randint(2, 10),
+            'classifier__max_depth': stats.randint(1, 4),
             'classifier__min_samples_split': stats.randint(2, 10),
             'classifier__min_samples_leaf': stats.randint(1, 10),
             'classifier__max_features': ['sqrt', 'log2'],
@@ -433,6 +433,24 @@ def main():
         
         pipeline = RandomForestPipeline(random_state=42)
         pipeline.fit(X_train.drop(columns="ID"), y_train)
+        
+        # Initial evaluation
+        print("\nInitial Model Performance:")
+        initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
+        
+        # # Hyperparameter tuning
+        print("\n" + "="*60)
+        print("HYPERPARAMETER TUNING")
+        print("="*60)
+        
+        pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
+        
+        # Final evaluation
+        print("\n" + "="*60)
+        print("FINAL MODEL PERFORMANCE")
+        print("="*60)
+        
+        final_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
 
         # Predict class probabilities for each dataset
         datasets = {
@@ -459,49 +477,31 @@ def main():
             print("Results saved!")
             proba_df.to_csv(output_path, index=False)
         
-        # Initial evaluation
-        # print("\nInitial Model Performance:")
-        # initial_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
-        
-        
-        # # Hyperparameter tuning
-        # print("\n" + "="*60)
-        # print("HYPERPARAMETER TUNING")
-        # print("="*60)
-        
-        # pipeline.hyperparameter_tuning(X_train.drop(columns="ID"), y_train, cv_folds=5, n_iter=20)
-        
-        # # Final evaluation
-        # print("\n" + "="*60)
-        # print("FINAL MODEL PERFORMANCE")
-        # print("="*60)
-        
-        # final_results = pipeline.evaluate(X_train.drop(columns="ID"), y_train, X_test.drop(columns="ID"), y_test)
-        
         # # Performance comparison
-        # print("\n" + "="*60)
-        # print("PERFORMANCE COMPARISON")
-        # print("="*60)
+        print("\n" + "="*60)
+        print("PERFORMANCE COMPARISON")
+        print("="*60)
         
-        # comparison_table = PrettyTable([
-        #     "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
-        # ])
-        # comparison_table.add_row([
-        #     "Initial",
-        #     f"{initial_results['test']['accuracy']:.4f}",
-        #     f"{initial_results['test']['f1']:.4f}",
-        #     f"{initial_results['test']['auc']:.4f}"
-        # ])
-        # comparison_table.add_row([
-        #     "Tuned",
-        #     f"{final_results['test']['accuracy']:.4f}",
-        #     f"{final_results['test']['f1']:.4f}",
-        #     f"{final_results['test']['auc']:.4f}"
-        # ])
-        # print(comparison_table)
+        comparison_table = PrettyTable([
+            "Model", "Test Accuracy", "Test F1-Score", "Test AUC"
+        ])
+        comparison_table.add_row([
+            "Initial",
+            f"{initial_results['test']['accuracy']:.4f}",
+            f"{initial_results['test']['f1']:.4f}",
+            f"{initial_results['test']['auc']:.4f}"
+        ])
+        comparison_table.add_row([
+            "Tuned",
+            f"{final_results['test']['accuracy']:.4f}",
+            f"{final_results['test']['f1']:.4f}",
+            f"{final_results['test']['auc']:.4f}"
+        ])
+        print(comparison_table)
         
-        # print("\nPipeline execution completed successfully!")
-        
+        print("\nPipeline execution completed successfully!")
+
+
     except KeyError as e:
         print(f"Environment variable error: {e}")
         print("Please set the DATA_PATH environment variable.")
