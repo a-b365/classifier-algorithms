@@ -20,7 +20,7 @@ Dependencies:
 - prettytable
 
 Author: Amir Bhattarai
-Date: 2025-05-30
+Date: May 30, 2025
 Version: 1.0
 """
 
@@ -130,16 +130,16 @@ class DecisionTreePipeline:
             ('outlier_filter', OutlierFilter(feature_columns)),
 
             # Power Transformation
-            # ("pt", PowerTransformer("yeo-johnson")),
+            ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
             
             # Remove highly skewed features
-            # ('skewness_filter', SkewnessFilter(threshold=1.0)),
+            ('skewness_filter', SkewnessFilter(threshold=1.0)),
             
             # Remove low variance features
-            # ("variance_threshold", VarianceThreshold(threshold=0.5)),
+            ("variance_threshold", VarianceThreshold(threshold=0.5)),
             
             # Remove highly correlated features
             ('correlation_filter', CorrelationFilter(threshold=0.01)),

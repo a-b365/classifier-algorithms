@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a comprehensive machine learning pipeline designed to handle high-dimensional datasets with limited sample sizes. The primary challenge addressed is the "curse of dimensionality" where the number of features (3238) significantly exceeds the number of samples (315).
+This project implements a comprehensive machine learning pipeline designed to handle a high-dimensional datasets with limited sample size. The primary challenge addressed is the "curse of dimensionality" where the number of features (3238) significantly exceeds the number of samples (315).
 
 ---
 
@@ -36,10 +36,10 @@ This project implements a comprehensive machine learning pipeline designed to ha
 classifier-algorithms/
 ├── utils/
 │   ├── decision_tree.py           # Decision Tree Classifier
-│   ├── filters.py                 # Pre-processing Filters
+│   ├── filters.py                 # Feature Selectors
 │   ├── logistic_regression.py     # Logistic Regression Classifier
 │   ├── metrics.py                 # Evaluation Metrics
-│   ├── plots.py                   # Matplotlib & Seaborn visualization helpers
+│   ├── plots.py                   # Matplotlib & Seaborn helpers
 │   └── random_forest.py           # Random Forest Classifier
 ├── notebooks/
 │   └── notebook.ipynb             # Interactive Jupyter notebook
@@ -110,32 +110,48 @@ ID_2,20010.083333,20100.0,...,0.090548,1
 
 ---
 
+## Example Usage
+
+```python
+
+    from logisitic_regression import LogisticRegressionPipeline
+
+    if name == "__main__":
+      pipeline = LogisticRegressionPipeline()
+      pipeline.fit(X_train, y_train)
+      predictions = pipeline.predict(X_test)
+      pipeline.evaluate(X_test, y_test)
+```
+---
+
 ## Outputs
 
-- **Model Performance**: Tabulate accuracy, AUC ROC, sensitivity, specificity, F1-score
-- **Best Parameters**: Provides the optimal parameters based-on hyperparameter tuning
-- **Best Cross Validation Score**: Provides the highest score achieved during cross-valdiation 
-- **Predicted Labels**: Predicted labels for each dataset in `results/`
+- **Model Evaluation**: Tabulate accuracy, AUC ROC, sensitivity, specificity, F1-score
+- **Best Parameters**: Provides appropriate parameters based on hyperparameter tuning
+- **Best CV Score**: Provides the best score obtained during cross-valdiation.
+- **Class Probabilities**: Class probabilities for each dataset in `results/`
 ---
 
 ## Methodology
 
 **Preprocessing:**
+- Exploratory Data Analysis
 - Infinite Handling
 - Median Imputation
-- Variance Filtering
-- Correlation Filtering
 
 **Feature Engineering**
 - Outlier Treatment
-- Power Transformation
+- Power Transformation (optional)
 - Robust Scaling
+- Skewness Filtering (optional)
+- Variance Filtering (optional)
+- Correlation Filtering
+- SMOTE Oversampling
 - Feature Selection
 
 **Model Training and Evaluation**
-- Cross Validation
-- Hyperparameter Tuning
-- Class Balancing
+- StratifiedKFold Cross Validation
+- RandomizedSearch Hyperparameter Tuning
 - Performance Metrics
 
 ---
@@ -144,10 +160,10 @@ ID_2,20010.083333,20100.0,...,0.090548,1
 
 - Run the desired Python module directly from the command line.
 - This will run one classifier at a time:
-  - Logistic Regression: Produces all classification metrics along with the comparison
-  - Decision Tree: Generates initial performance metrics and improved performance
-  - Random Forest: Produces the same results as other classifiers
-- Note: The results of all classifiers are in the similar format
+  - Logistic Regression: Produces all classification metrics and the comparison
+  - Decision Tree: Generates initial performance measures and final performance
+  - Random Forest: It produces the same results as other classifiers
+- Note: The results of all classifiers are in similar format.
 
 ---
 

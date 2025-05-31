@@ -16,7 +16,7 @@ Functions:
     visualize_feature: Create scatter and box plots for individual features
 
 Author: Amir Bhattarai
-Date: 2025-05-30
+Date: May 30, 2025
 Version: 1.0
 """
 

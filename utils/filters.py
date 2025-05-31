@@ -11,7 +11,7 @@ Classes:
     OutlierFilter: Handles outliers using IQR-based methods
 
 Author: Amir Bhattarai
-Date: 2025-05-30
+Date: May 30, 2025
 Version: 1.0
 """
 
