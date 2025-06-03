@@ -27,6 +27,7 @@ Version: 1.0
 # Standard library imports
 import os
 import sys
+import random
 import warnings
 from typing import Tuple, Dict, Any
 
@@ -128,37 +129,27 @@ class RandomForestPipeline:
             
             # Outlier handling - robust outlier treatment
             ('outlier_filter', OutlierFilter(feature_columns)),
-
-            # Power Transformation
-            # ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
-            
-            # Remove highly skewed features
-            # ('skewness_filter', SkewnessFilter(threshold=1.0)),
-
-            # Remove low variance features
-            # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
             ('correlation_filter', CorrelationFilter(threshold=0.95)),
             
             # Handle class imbalance
-            ('smote', SMOTE(random_state=self.random_state)),
+            ('smote', SMOTE(random_state=self.random_state, k_neighbors=5)),
             
             # Feature selection based on mutual information
             ('selector', SelectKBest(
-                score_func=mutual_info_classif, 
+                score_func=lambda X, y: mutual_info_classif(X, y, random_state=self.random_state), 
                 k=50
             )),
 
             # Final model
             ("classifier", RandomForestClassifier(
                 random_state=self.random_state,
-                class_weight="balanced",
                 max_features='sqrt',
-                max_depth=2,
+                max_depth=1,
                 min_samples_split=6,
                 min_samples_leaf=8,
                 n_estimators=8
@@ -409,6 +400,7 @@ def main():
     4. Perform hyperparameter tuning
     5. Evaluate final performance
     """
+
     try:
         # Get data paths from environment variables
         data_path = os.environ.get("DATA_PATH")

@@ -129,18 +129,9 @@ class LogisticRegressionPipeline:
             
             # Outlier handling - robust outlier treatment
             ('outlier_filter', OutlierFilter(feature_columns)),
-
-            # Power Transformation
-            # ("pt", PowerTransformer("yeo-johnson")),
             
             # Feature scaling - robust to outliers
             ("scaler", RobustScaler()),
-            
-            # Remove highly skewed features
-            # ('skewness_filter', SkewnessFilter(threshold=1.0)),
-            
-            # Remove low variance features
-            # ("variance_threshold", VarianceThreshold(threshold=0.01)),
             
             # Remove highly correlated features
             ('correlation_filter', CorrelationFilter(threshold=0.95)),
@@ -150,18 +141,17 @@ class LogisticRegressionPipeline:
             
             # Feature selection based on mutual information
             ('feature_selection', SelectKBest(
-                score_func=mutual_info_classif, 
-                k=50
+                score_func=lambda X, y: mutual_info_classif(X, y, random_state=self.random_state), 
+                k=40
             )),
             
             # Final model
             ("classifier", LogisticRegression(
                 penalty='l2',
-                solver='liblinear',
+                solver='saga',
                 max_iter=5000,
                 C=0.1,
-                random_state=self.random_state,
-                class_weight="balanced"
+                random_state=self.random_state
             ))
         ]
         
