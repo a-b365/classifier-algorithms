@@ -8,7 +8,8 @@ including correlation filtering, skewness filtering, and outlier handling.
 Classes:
     CorrelationFilter: Removes highly correlated features
     SkewnessFilter: Removes features with high skewness
-    OutlierFilter: Handles outliers using IQR-based methods
+    OutlierImputer: Imputes outliers using IQR-based methods
+    Winsorization: Clips outliers using IQR-based methods
 
 Author: Amir Bhattarai
 Date: May 30, 2025
@@ -47,7 +48,7 @@ class CorrelationFilter(BaseEstimator, TransformerMixin):
     >>> import pandas as pd
     >>> X = pd.DataFrame({'A': [1, 2, 3], 'B': [1.1, 2.1, 3.1], 'C': [4, 5, 6]})
     >>> filter = CorrelationFilter(threshold=0.9)
-    >>> X_filtered = filter.fit_transform(X)
+    >>> X_uncorrelated = filter.fit_transform(X)
     """
     
     def __init__(self, threshold=0.95):
@@ -105,7 +106,7 @@ class CorrelationFilter(BaseEstimator, TransformerMixin):
         
         Returns
         -------
-        X_transformed : DataFrame
+        X_uncorrelated : DataFrame
             Transformed data with correlated features removed.
         """
         return pd.DataFrame(X).drop(columns=self.to_drop_, axis=1)
@@ -136,7 +137,7 @@ class SkewnessFilter(BaseEstimator, TransformerMixin):
     >>> import pandas as pd
     >>> X = pd.DataFrame({'A': [1, 2, 3, 4, 5], 'B': [1, 1, 1, 100, 200]})
     >>> filter = SkewnessFilter(threshold=1.0)
-    >>> X_filtered = filter.fit_transform(X)
+    >>> X_unskewed = filter.fit_transform(X)
     """
     
     def __init__(self, threshold=0.75):
@@ -188,7 +189,7 @@ class SkewnessFilter(BaseEstimator, TransformerMixin):
         
         Returns
         -------
-        X_transformed : DataFrame
+        X_unskewed : DataFrame
             Transformed data with skewed features removed.
         """
         return pd.DataFrame(X).drop(columns=self.to_drop_, axis=1)
@@ -269,7 +270,7 @@ class OutlierImputer(BaseEstimator, TransformerMixin):
         X_clean = pd.DataFrame(X, columns=self.columns_)
         
         for column in X_clean.columns:
-            # Step 1: Impute outliers with median
+
             Q1 = X_clean[column].quantile(0.25)
             Q3 = X_clean[column].quantile(0.75)
             IQR = Q3 - Q1
@@ -341,7 +342,7 @@ class Winsorization(BaseEstimator, TransformerMixin):
         Returns
         -------
         X_clip : DataFrame
-             Data with outliers clipped.
+            Data with outliers clipped.
         """
         X_clip = X.copy()
         
