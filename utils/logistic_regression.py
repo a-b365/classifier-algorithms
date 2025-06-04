@@ -89,7 +89,7 @@ class LogisticRegressionPipeline:
     >>> pipeline = LogisticRegressionPipeline()
     >>> pipeline.fit(X_train, y_train)
     >>> predictions = pipeline.predict(X_test)
-    >>> pipeline.evaluate(X_test, y_test)
+    >>> pipeline.evaluate(X_train, y_train, X_test, y_test)
     """
     
     def __init__(self, random_state=42):
@@ -299,7 +299,7 @@ class LogisticRegressionPipeline:
         print("Starting hyperparameter tuning...")
         
         # Define parameter grid for tuning
-        param_grid = {
+        params = {
             'classifier__max_iter':stats.randint(2500, 5000),
             'classifier__C': [0.001, 0.1, 1],
             'classifier__penalty': ['l1', 'l2'],
@@ -317,7 +317,7 @@ class LogisticRegressionPipeline:
         # Perform randomized search
         random_search = RandomizedSearchCV(
             estimator=self.pipeline,
-            param_distributions=param_grid,
+            param_distributions=params,
             n_iter=n_iter,
             cv=cv,
             scoring="f1",

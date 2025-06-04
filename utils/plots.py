@@ -339,8 +339,8 @@ def main():
     """
     try:
         # Get data paths from environment variables
-        train_data_path = os.environ["ORIGINAL_DATA_PATH"] + "/train_set.csv"
-        test_data_path = os.environ["ORIGINAL_DATA_PATH"] + "/test_set.csv"
+        train_data_path = os.environ["DATA_PATH"] + "/train_set.csv"
+        test_data_path = os.environ["DATA_PATH"] + "/test_set.csv"
         
         # Load data
         train_data = pd.read_csv(train_data_path)

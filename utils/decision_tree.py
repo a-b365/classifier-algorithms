@@ -88,7 +88,7 @@ class DecisionTreePipeline:
     >>> pipeline = DecisionTreePipeline()
     >>> pipeline.fit(X_train, y_train)
     >>> predictions = pipeline.predict(X_test)
-    >>> pipeline.evaluate(X_test, y_test)
+    >>> pipeline.evaluate(X_train, y_train, X_test, y_test)
     """
     
     def __init__(self, random_state=42):
