@@ -194,36 +194,32 @@ class SkewnessFilter(BaseEstimator, TransformerMixin):
         return pd.DataFrame(X).drop(columns=self.to_drop_, axis=1)
 
 
-class OutlierFilter(BaseEstimator, TransformerMixin):
+class OutlierImputer(BaseEstimator, TransformerMixin):
     """
-    Handle outliers using IQR-based method with median imputation and clipping.
-    
-    This transformer handles outliers in two steps:
-    1. Replace outliers with median values
-    2. Apply conservative winsorization by clipping extreme values
+    Handle outliers using IQR-based method with median imputation.
     
     Parameters
     ----------
     columns : list
-        List of column names to process for outlier handling.
+        List of column names to process for outlier imputation.
     
     Attributes
     ----------
     columns_ : list
-        Stored column names for transformation.
+        Stored column names for imputation.
     
     Examples
     --------
-    >>> from filters import OutlierFilter
+    >>> from filters import OutlierImputer
     >>> import pandas as pd
     >>> X = pd.DataFrame({'A': [1, 2, 3, 100], 'B': [1, 2, 3, 4]})
-    >>> filter = OutlierFilter(columns=['A', 'B'])
-    >>> X_filtered = filter.fit_transform(X)
+    >>> filter = OutlierImputer(columns=['A', 'B'])
+    >>> X_clean = filter.fit_transform(X)
     """
     
     def __init__(self, columns):
         """
-        Initialize the OutlierFilter.
+        Initialize the OutlierImputer.
         
         Parameters
         ----------
@@ -234,14 +230,14 @@ class OutlierFilter(BaseEstimator, TransformerMixin):
     
     def fit(self, X, y=None):
         """
-        Fit the transformer (no fitting required for this transformer).
+        Fit the imputer (no fitting required for this filter).
         
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
             Training data.
         y : array-like of shape (n_samples,), default=None
-            Target values (ignored in this transformer).
+            Target values (ignored in this filter).
         
         Returns
         -------
@@ -253,23 +249,22 @@ class OutlierFilter(BaseEstimator, TransformerMixin):
     
     def transform(self, X):
         """
-        Transform the data by handling outliers using IQR method.
+        Clean the data by handling outliers using IQR method.
         
         The transformation process:
         1. Calculate Q1, Q3, and IQR for each feature
         2. Define outlier bounds using 1.5 * IQR rule
         3. Replace outliers with median values
-        4. Recalculate bounds and apply clipping for conservative winsorization
         
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
-            Data to transform.
+            Data to clean
         
         Returns
         -------
-        X_transformed : DataFrame
-            Transformed data with outliers handled.
+        X_clean : DataFrame
+            Cleaned data with outliers imputed.
         """
         X_clean = pd.DataFrame(X, columns=self.columns_)
         
@@ -291,16 +286,78 @@ class OutlierFilter(BaseEstimator, TransformerMixin):
             median = X_clean[column].median()
             X_clean.loc[outliers_mask, column] = median
             
-            # Step 2: Recalculate bounds and apply conservative clipping
-            Q1 = X_clean[column].quantile(0.25)
-            Q3 = X_clean[column].quantile(0.75)
+        return X_clean
+    
+
+class Winsorization(BaseEstimator, TransformerMixin):
+    """
+    Handle outliers using IQR-based method with clipping.
+    
+    This transformer handles outliers by applying conservative 
+    winsorization by clipping extreme values
+    
+    Examples
+    --------
+    >>> from filters import Winsorization
+    >>> import pandas as pd
+    >>> X = pd.DataFrame({'A': [1, 2, 3, 100], 'B': [1, 2, 3, 4]})
+    >>> filter = Winsorization(columns=['A', 'B'])
+    >>> X_clip = filter.fit_transform(X)
+    """
+
+    def fit(self, X, y=None):
+        """
+        Fit the filter (no fitting required for this filter).
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data.
+        y : array-like of shape (n_samples,), default=None
+            Target values (ignored in this filter).
+        
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+        # No fitting necessary
+        return self
+    
+    def transform(self, X):
+        """
+        Clip the outliers using IQR method.
+        
+        The clipping process:
+        1. Calculate Q1, Q3, and IQR for each feature
+        2. Define outlier bounds using 1.5 * IQR rule
+        3. Apply clipping for conservative winsorization
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Data to clip
+        
+        Returns
+        -------
+        X_clip : DataFrame
+             Data with outliers clipped.
+        """
+        X_clip = X.copy()
+        
+        for column in X_clip.columns:
+            # Recalculate bounds and apply conservative clipping
+            Q1 = X_clip[column].quantile(0.25)
+            Q3 = X_clip[column].quantile(0.75)
             IQR = Q3 - Q1
             lower_bound = Q1 - 1.5 * IQR
             upper_bound = Q3 + 1.5 * IQR
             
             # Apply winsorization (clipping)
-            X_clean[column] = np.clip(
-                X_clean[column], lower_bound, upper_bound
+            X_clip[column] = np.clip(
+                X_clip[column], lower_bound, upper_bound
             )
         
-        return X_clean
+        return X_clip
+        
+

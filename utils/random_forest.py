@@ -57,7 +57,7 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 # Local imports
 try:
     from metrics import evaluate_metrics
-    from filters import CorrelationFilter, OutlierFilter, SkewnessFilter
+    from filters import CorrelationFilter, OutlierImputer, SkewnessFilter, Winsorization
 except ImportError as e:
     print(f"Warning: Could not import local modules: {e}")
     print("Please ensure 'metrics.py' and 'filters.py' are in the same directory.")
@@ -121,17 +121,21 @@ class RandomForestPipeline:
             Complete preprocessing and modeling pipeline.
         """
         pipeline_steps = [
+
             # Data imputation - handle missing values
-            ("imputer", SimpleImputer(
+            ("simple_imputer", SimpleImputer(
                 missing_values=np.nan, 
                 strategy="median"
             )),
             
             # Outlier handling - robust outlier treatment
-            ('outlier_filter', OutlierFilter(feature_columns)),
+            ('outlier_imputer', OutlierImputer(feature_columns)),
+
+            # Winsorization - clip outliers
+            ("winsorization", Winsorization()),
             
             # Feature scaling - robust to outliers
-            ("scaler", RobustScaler()),
+            ("robust_scaler", RobustScaler()),
             
             # Remove highly correlated features
             ('correlation_filter', CorrelationFilter(threshold=0.95)),
@@ -339,9 +343,9 @@ class RandomForestPipeline:
         return self
 
 
-def load_and_preprocess_data(train_path, test_path, blinded_path):
+def load_and_preprocess_data(train_path, test_path, blinded_test_path):
     """
-    Load and preprocess training and test datasets.
+    Load and preprocess training, test and blinded test datasets.
     
     Parameters
     ----------
@@ -349,12 +353,12 @@ def load_and_preprocess_data(train_path, test_path, blinded_path):
         Path to the training dataset CSV file.
     test_path : str
         Path to the test dataset CSV file.
-    blinded_path : str
+    blinded_test_path : str
         Path to the blinded test dataset CSV file.
     
     Returns
     -------
-    X_train, y_train, X_test, y_test, X_blinded : tuple
+    X_train, y_train, X_test, y_test, X_blinded_test : tuple
         Preprocessed training and test features and targets.
     """
     try:
@@ -362,27 +366,26 @@ def load_and_preprocess_data(train_path, test_path, blinded_path):
         print("Loading datasets...")
         train_data = pd.read_csv(train_path)
         test_data = pd.read_csv(test_path)
-        blinded_data = pd.read_csv(blinded_path)
+        blinded_test_data = pd.read_csv(blinded_test_path)
         
         print(f"Training data shape: {train_data.shape}")
         print(f"Test data shape: {test_data.shape}")
-        print(f"Blinded test data shape: {blinded_data.shape}")
+        print(f"Blinded test data shape: {blinded_test_data.shape}")
         
         # Separate features and targets
         X_train = train_data.drop(columns=["CLASS"])
         y_train = train_data["CLASS"]
         X_test = test_data.drop(columns=["CLASS"])
         y_test = test_data["CLASS"]
-        X_blinded = blinded_data
         
         # Handle infinite values
         print("Handling infinite values...")
         X_train = X_train.replace([np.inf, -np.inf], np.nan)
         X_test = X_test.replace([np.inf, -np.inf], np.nan)
-        X_blinded = X_blinded.replace([np.inf, -np.inf], np.nan)
-
+        X_blinded_test = blinded_test_data.replace([np.inf, -np.inf], np.nan)
+        
         print("Data preprocessing completed!")
-        return X_train, y_train, X_test, y_test, X_blinded
+        return X_train, y_train, X_test, y_test, X_blinded_test
         
     except Exception as e:
         print(f"Error loading data: {e}")
@@ -410,12 +413,11 @@ def main():
         
         train_path = os.path.join(data_path, "train_set.csv")
         test_path = os.path.join(data_path, "test_set.csv")
-        blinded_path = os.path.join(data_path, "blinded_test_set.csv")
-
-        
+        blinded_test_path = os.path.join(data_path, "blinded_test_set.csv")
+ 
         # Load and preprocess data
-        X_train, y_train, X_test, y_test, X_blinded = load_and_preprocess_data(
-            train_path, test_path, blinded_path
+        X_train, y_train, X_test, y_test, X_blinded_test = load_and_preprocess_data(
+            train_path, test_path, blinded_test_path
         )
         
         # Initialize and fit the pipeline
@@ -448,7 +450,7 @@ def main():
         datasets = {
             'train': X_train,
             'test': X_test, 
-            'blinded': X_blinded
+            'blinded': X_blinded_test
         }
 
         for dataset_name, dataset in datasets.items():
@@ -506,5 +508,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()    
-
+    main()
